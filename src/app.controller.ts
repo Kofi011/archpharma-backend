@@ -4,7 +4,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 @ApiTags('Root System Status')
 @Controller()
 export class AppController {
-  @Get()
+  @Get(['', 'api/v1', 'api/v1/health', 'health'])
   @ApiOperation({ summary: 'Backend API Health & Welcome Status' })
   getSystemStatus() {
     return {
