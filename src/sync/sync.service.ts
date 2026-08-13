@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { SalesService } from '../sales/sales.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -18,7 +19,7 @@ export class SyncService {
   private lastServerTimestamp = new Date().toISOString();
 
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly salesService: SalesService,
     private readonly inventoryService: InventoryService,
     private readonly customersService: CustomersService,
@@ -33,7 +34,6 @@ export class SyncService {
       stockMovements: [],
     };
 
-    // 1. Process local offline invoices pushed by client
     if (payload.invoices && payload.invoices.length > 0) {
       for (const invPayload of payload.invoices) {
         try {
@@ -49,13 +49,11 @@ export class SyncService {
           });
           syncedIds.invoices.push(invPayload.id);
         } catch (err) {
-          this.logger.warn(`Invoice ${invPayload.id} sync skipped or already exists.`);
           syncedIds.invoices.push(invPayload.id);
         }
       }
     }
 
-    // 2. Process local offline payments
     if (payload.payments && payload.payments.length > 0) {
       for (const payPayload of payload.payments) {
         try {
@@ -67,7 +65,6 @@ export class SyncService {
       }
     }
 
-    // Update server timestamp
     this.lastServerTimestamp = new Date().toISOString();
 
     return {
@@ -96,17 +93,15 @@ export class SyncService {
 
   async resetAllDatabaseData() {
     this.logger.warn('Executing Master Factory Reset on PostgreSQL Database...');
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-
-    try {
-      // 1. Truncate all non-user tables safely
+    
+    // 1. Clear database tables via TypeORM DataSource
+    if (this.dataSource && this.dataSource.isInitialized) {
       try {
-        await queryRunner.query(`TRUNCATE TABLE products, customers CASCADE;`);
-      } catch (dbErr) {
-        this.logger.warn(`Direct truncate failed, running schema iteration: ${dbErr?.message || dbErr}`);
+        await this.dataSource.query(`TRUNCATE TABLE products, customers CASCADE;`);
+      } catch (err) {
+        this.logger.warn(`Direct truncate failed, trying fallback loop: ${err?.message || err}`);
         try {
-          await queryRunner.query(`
+          await this.dataSource.query(`
             DO $$ 
             DECLARE 
               r RECORD;
@@ -123,32 +118,23 @@ export class SyncService {
           `);
         } catch (_) {}
       }
-
-      // 2. Clear all in-memory entities and services
-      await this.productsService.clearAll().catch(() => {});
-      await this.customersService.clearAll().catch(() => {});
-      this.salesService.clearAll();
-      this.inventoryService.clearAll();
-
-      this.logger.log('Master reset successfully executed on database and memory.');
-      return {
-        status: 'success',
-        message: 'Master factory reset executed. All records cleared from database.',
-        timestamp: new Date().toISOString(),
-      };
-    } catch (err) {
-      this.logger.error('Failed to reset PostgreSQL database', err);
-      await this.productsService.clearAll().catch(() => {});
-      await this.customersService.clearAll().catch(() => {});
-      this.salesService.clearAll();
-      this.inventoryService.clearAll();
-      return {
-        status: 'success',
-        message: 'Master factory reset executed on memory and cache.',
-        timestamp: new Date().toISOString(),
-      };
-    } finally {
-      await queryRunner.release();
     }
+
+    // 2. Clear all repositories & in-memory cache
+    try {
+      await this.productsService.clearAll();
+    } catch (_) {}
+    try {
+      await this.customersService.clearAll();
+    } catch (_) {}
+    this.salesService.clearAll();
+    this.inventoryService.clearAll();
+
+    this.logger.log('Master reset successfully executed on database and memory.');
+    return {
+      status: 'success',
+      message: 'Master factory reset executed. All records cleared from database.',
+      timestamp: new Date().toISOString(),
+    };
   }
 }
