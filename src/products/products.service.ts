@@ -79,7 +79,14 @@ export class ProductsService {
   }
 
   async clearAll() {
-    await this.productRepository.clear();
+    try {
+      await this.productRepository.delete({});
+    } catch (_) {
+      try {
+        await this.productRepository.clear();
+      } catch (_) {}
+    }
   }
 }
+
 

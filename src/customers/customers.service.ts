@@ -70,7 +70,14 @@ export class CustomersService {
   }
 
   async clearAll() {
-    await this.customerRepository.clear();
+    try {
+      await this.customerRepository.delete({});
+    } catch (_) {
+      try {
+        await this.customerRepository.clear();
+      } catch (_) {}
+    }
   }
 }
+
 
