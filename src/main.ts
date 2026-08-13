@@ -9,7 +9,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  app.setGlobalPrefix('api/v1', { exclude: ['/'] });
+  app.setGlobalPrefix('api/v1');
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
@@ -18,6 +18,34 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // Status response for root and api/v1 base URLs
+  const httpAdapter = app.getHttpAdapter().getInstance();
+  const statusResponse = (_req: any, res: any) => {
+    res.json({
+      status: 'online',
+      system: 'ArchPharma Wholesale ERP API',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      documentation: '/api/v1/docs',
+      endpoints: {
+        auth: '/api/v1/auth',
+        products: '/api/v1/products',
+        inventory: '/api/v1/inventory',
+        customers: '/api/v1/customers',
+        sales: '/api/v1/sales',
+        credit: '/api/v1/credit',
+        reports: '/api/v1/reports',
+        sync: '/api/v1/sync',
+      },
+    });
+  };
+
+  httpAdapter.get('/', statusResponse);
+  httpAdapter.get('/api/v1', statusResponse);
+  httpAdapter.get('/api/v1/', statusResponse);
+  httpAdapter.get('/api/v1/health', statusResponse);
+  httpAdapter.get('/health', statusResponse);
 
   const config = new DocumentBuilder()
     .setTitle('ArchPharma API')
