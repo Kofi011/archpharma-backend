@@ -4,14 +4,17 @@ import { Repository } from 'typeorm';
 import { Product } from './product.entity';
 
 export interface CreateProductDto {
-  barcode?: string;
+  id?: string;
+  name?: string; // fallback
   productName: string;
+  barcode?: string;
   genericName?: string;
   brandName?: string;
   category?: string;
   manufacturer?: string;
   supplierId?: string;
   costPrice: number;
+  unitPrice?: number; // fallback
   sellingPrice: number;
   reorderLevel?: number;
 }
@@ -57,9 +60,14 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto): Promise<Product> {
+    const productName = dto.productName || dto.name || 'Unnamed Product';
+    const sellingPrice = dto.sellingPrice ?? dto.unitPrice ?? 0.00;
     const barcode = dto.barcode || `${Math.floor(1000000000000 + Math.random() * 9000000000000)}`;
     const newProduct = this.productRepository.create({
+      id: dto.id,
       ...dto,
+      productName,
+      sellingPrice,
       barcode,
       status: 'active',
     });
@@ -68,7 +76,13 @@ export class ProductsService {
 
   async update(id: string, dto: Partial<CreateProductDto>): Promise<Product> {
     const product = await this.findOne(id);
-    this.productRepository.merge(product, dto);
+    const productName = dto.productName || dto.name || product.productName;
+    const sellingPrice = dto.sellingPrice ?? dto.unitPrice ?? product.sellingPrice;
+    this.productRepository.merge(product, {
+      ...dto,
+      productName,
+      sellingPrice,
+    });
     return this.productRepository.save(product);
   }
 

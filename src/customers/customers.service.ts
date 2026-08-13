@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Customer } from './customer.entity';
 
 export interface CreateCustomerDto {
+  id?: string;
+  name?: string; // fallback
   businessName: string;
   contactPerson?: string;
   phone?: string;
@@ -37,8 +39,11 @@ export class CustomersService {
   }
 
   async create(dto: CreateCustomerDto): Promise<Customer> {
+    const businessName = dto.businessName || dto.name || 'Unnamed Customer';
     const newCustomer = this.customerRepository.create({
+      id: dto.id,
       ...dto,
+      businessName,
       outstandingBalance: 0.00,
       status: 'active',
       syncStatus: 'synced',
@@ -48,7 +53,11 @@ export class CustomersService {
 
   async update(id: string, dto: Partial<CreateCustomerDto>): Promise<Customer> {
     const customer = await this.findOne(id);
-    this.customerRepository.merge(customer, dto);
+    const businessName = dto.businessName || dto.name || customer.businessName;
+    this.customerRepository.merge(customer, {
+      ...dto,
+      businessName,
+    });
     return this.customerRepository.save(customer);
   }
 

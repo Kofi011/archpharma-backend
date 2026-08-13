@@ -120,9 +120,28 @@ export class SalesService {
     const invoiceNum = `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
     let customerName = 'Walk-in Customer';
-    if (dto.customerId) {
-      const cust = await this.customersService.findOne(dto.customerId);
-      customerName = cust.businessName;
+    let resolvedCustomerId = dto.customerId;
+    if (resolvedCustomerId && resolvedCustomerId !== 'Walk-in Customer' && resolvedCustomerId.trim() !== '') {
+      try {
+        const cust = await this.customersService.findOne(resolvedCustomerId);
+        customerName = cust.businessName;
+      } catch (_) {
+        // Try looking up customer by businessName
+        try {
+          const allCust = await this.customersService.findAll();
+          const found = allCust.find((c) => c.businessName === resolvedCustomerId || c.id === resolvedCustomerId);
+          if (found) {
+            customerName = found.businessName;
+            resolvedCustomerId = found.id;
+          } else {
+            customerName = resolvedCustomerId; // Fallback to raw input
+          }
+        } catch (err) {
+          customerName = resolvedCustomerId;
+        }
+      }
+    } else {
+      resolvedCustomerId = undefined;
     }
 
     let subtotal = 0;
@@ -161,7 +180,7 @@ export class SalesService {
     const newInvoice: Invoice = {
       id: invoiceId,
       invoiceNumber: invoiceNum,
-      customerId: dto.customerId,
+      customerId: resolvedCustomerId,
       customerName,
       cashierId: dto.cashierId || '22222222-2222-2222-2222-222222222222',
       cashierName: 'Daniel',
