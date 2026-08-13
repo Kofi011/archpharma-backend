@@ -77,4 +77,9 @@ export class ProductsService {
     await this.productRepository.remove(product);
     return { message: `Product ${id} deleted successfully` };
   }
+
+  async clearAll() {
+    await this.productRepository.clear();
+  }
 }
+

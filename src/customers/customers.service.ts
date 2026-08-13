@@ -68,4 +68,9 @@ export class CustomersService {
       ],
     };
   }
+
+  async clearAll() {
+    await this.customerRepository.clear();
+  }
 }
+

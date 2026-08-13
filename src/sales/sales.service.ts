@@ -196,4 +196,9 @@ export class SalesService {
     }
     return inv;
   }
+
+  clearAll() {
+    this.invoices = [];
+  }
 }
+

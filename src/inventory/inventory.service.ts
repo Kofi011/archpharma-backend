@@ -185,4 +185,10 @@ export class InventoryService {
       ],
     };
   }
+
+  clearAll() {
+    this.batches = [];
+    this.stockMovements = [];
+  }
 }
+

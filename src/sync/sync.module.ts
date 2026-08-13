@@ -4,11 +4,13 @@ import { SyncController } from './sync.controller';
 import { SalesModule } from '../sales/sales.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { CustomersModule } from '../customers/customers.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
-  imports: [SalesModule, InventoryModule, CustomersModule],
+  imports: [SalesModule, InventoryModule, CustomersModule, ProductsModule],
   controllers: [SyncController],
   providers: [SyncService],
   exports: [SyncService],
 })
 export class SyncModule {}
+
