@@ -5,6 +5,8 @@ import { SalesService } from '../sales/sales.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
 import { ProductsService } from '../products/products.service';
+import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface PushSyncPayload {
   invoices?: any[];
@@ -24,6 +26,8 @@ export class SyncService {
     private readonly inventoryService: InventoryService,
     private readonly customersService: CustomersService,
     private readonly productsService: ProductsService,
+    private readonly auditService: AuditService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async pushPendingRecords(payload: PushSyncPayload) {
@@ -97,8 +101,9 @@ export class SyncService {
     // 1. Clear database tables via TypeORM DataSource
     if (this.dataSource && this.dataSource.isInitialized) {
       try {
-        await this.dataSource.query(`TRUNCATE TABLE products, customers CASCADE;`);
-      } catch (err) {
+        await this.dataSource.query(`TRUNCATE TABLE "products", "customers" CASCADE;`);
+        this.logger.log('Successfully truncated products and customers PostgreSQL tables.');
+      } catch (err: any) {
         this.logger.warn(`Direct truncate failed, trying fallback loop: ${err?.message || err}`);
         try {
           await this.dataSource.query(`
@@ -116,19 +121,43 @@ export class SyncService {
               END LOOP; 
             END $$;
           `);
-        } catch (_) {}
+        } catch (innerErr: any) {
+          this.logger.error(`Fallback truncate error: ${innerErr?.message || innerErr}`);
+        }
       }
     }
 
     // 2. Clear all repositories & in-memory cache
     try {
       await this.productsService.clearAll();
-    } catch (_) {}
+    } catch (e: any) {
+      this.logger.warn(`ProductsService clearAll: ${e?.message}`);
+    }
     try {
       await this.customersService.clearAll();
-    } catch (_) {}
-    this.salesService.clearAll();
-    this.inventoryService.clearAll();
+    } catch (e: any) {
+      this.logger.warn(`CustomersService clearAll: ${e?.message}`);
+    }
+    try {
+      this.salesService.clearAll();
+    } catch (e: any) {
+      this.logger.warn(`SalesService clearAll: ${e?.message}`);
+    }
+    try {
+      this.inventoryService.clearAll();
+    } catch (e: any) {
+      this.logger.warn(`InventoryService clearAll: ${e?.message}`);
+    }
+    try {
+      this.auditService.clearAll();
+    } catch (e: any) {
+      this.logger.warn(`AuditService clearAll: ${e?.message}`);
+    }
+    try {
+      this.notificationsService.clearAll();
+    } catch (e: any) {
+      this.logger.warn(`NotificationsService clearAll: ${e?.message}`);
+    }
 
     this.logger.log('Master reset successfully executed on database and memory.');
     return {

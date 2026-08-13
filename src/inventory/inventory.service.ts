@@ -188,7 +188,7 @@ export class InventoryService {
 
   clearAll() {
     this.batches = [];
-    this.stockMovements = [];
+    this.movements = [];
   }
 }
 

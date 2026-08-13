@@ -55,4 +55,8 @@ export class AuditService {
     this.logs.unshift(item);
     return item;
   }
+
+  clearAll() {
+    this.logs = [];
+  }
 }

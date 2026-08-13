@@ -47,16 +47,6 @@ async function bootstrap() {
   httpAdapter.get('/api/v1/health', statusResponse);
   httpAdapter.get('/health', statusResponse);
 
-  httpAdapter.post('/api/v1/sync/reset', async (_req: any, res: any) => {
-    try {
-      const syncService = app.get(SyncService);
-      const result = await syncService.resetAllDatabaseData();
-      res.status(200).json(result);
-    } catch (e) {
-      res.status(200).json({ status: 'success', message: 'Master reset executed.' });
-    }
-  });
-
 
   const config = new DocumentBuilder()
     .setTitle('ArchPharma API')

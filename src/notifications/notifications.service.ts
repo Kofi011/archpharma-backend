@@ -63,4 +63,8 @@ export class NotificationsService {
     this.notifications.unshift(newNotif);
     return newNotif;
   }
+
+  clearAll() {
+    this.notifications = [];
+  }
 }
